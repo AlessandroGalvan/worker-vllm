@@ -45,6 +45,14 @@ RUN --mount=type=secret,id=HF_TOKEN,required=false \
     if [ -n "$MODEL_NAME" ]; then \
     python3 /src/download_model.py; \
     fi
+# Installa strumenti di pulizia
+RUN apt-get update && apt-get install -y ncdu
 
+# Crea directory di lavoro efficiente
+RUN mkdir -p /workspace/cache && chmod 777 /workspace/cache
+
+# Imposta variabili d'ambiente
+ENV HF_HOME=/workspace/cache/huggingface
+ENV TMPDIR=/workspace/cache/tmp
 # Start the handler
 CMD ["python3", "/src/handler.py"]
