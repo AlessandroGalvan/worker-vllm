@@ -11,3 +11,4 @@ hf-transfer
 transformers
 bitsandbytes>=0.45.0
 timm
+git
