@@ -1,7 +1,12 @@
 FROM nvidia/cuda:12.1.0-base-ubuntu22.04 
 
+# Installazione Git, Git-LFS e dipendenze di sistema
 RUN apt-get update -y \
-    && apt-get install -y python3-pip
+    && apt-get install -y python3-pip git git-lfs ncdu \
+    && git lfs install \
+    && git config --global core.compression 0 \
+    && git config --global http.postBuffer 1048576000 \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN ldconfig /usr/local/cuda-12.1/compat/
 
@@ -11,7 +16,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     python3 -m pip install --upgrade pip && \
     python3 -m pip install --upgrade -r /requirements.txt
 
-# Install vLLM (switching back to pip installs since issues that required building fork are fixed and space optimization is not as important since caching) and FlashInfer 
+# Install vLLM e FlashInfer 
 RUN python3 -m pip install vllm==0.9.1 && \
     python3 -m pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.3
 
@@ -36,6 +41,10 @@ ENV MODEL_NAME=$MODEL_NAME \
 
 ENV PYTHONPATH="/:/vllm-workspace"
 
+# Configurazione directory cache efficiente
+RUN mkdir -p /workspace/cache && chmod 777 /workspace/cache
+ENV TMPDIR=/workspace/cache/tmp \
+    HF_HOME=/workspace/cache/huggingface
 
 COPY src /src
 RUN --mount=type=secret,id=HF_TOKEN,required=false \
@@ -45,14 +54,6 @@ RUN --mount=type=secret,id=HF_TOKEN,required=false \
     if [ -n "$MODEL_NAME" ]; then \
     python3 /src/download_model.py; \
     fi
-# Installa strumenti di pulizia
-RUN apt-get update && apt-get install -y ncdu
 
-# Crea directory di lavoro efficiente
-RUN mkdir -p /workspace/cache && chmod 777 /workspace/cache
-
-# Imposta variabili d'ambiente
-ENV HF_HOME=/workspace/cache/huggingface
-ENV TMPDIR=/workspace/cache/tmp
 # Start the handler
 CMD ["python3", "/src/handler.py"]
